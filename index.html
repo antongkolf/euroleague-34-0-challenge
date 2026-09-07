@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>34-0 — Euroleague Roster Builder</title>
+<style>
+  :root {
+    --navy: #0a1e3f;
+    --navy-dark: #050f22;
+    --navy-light: #142c56;
+    --gold: #f2b134;
+    --gold-dark: #c8901a;
+    --cream: #f3ede0;
+    --court: #c96a3e;
+    --win: #3f9142;
+    --loss: #b8433b;
+    --line: rgba(242,177,52,0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--navy-dark);
+    color: var(--cream);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 50% 0%, var(--navy-light) 0%, var(--navy-dark) 70%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 460px;
+    min-height: 100vh;
+    padding: 18px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  header {
+    text-align: center;
+    padding-top: 4px;
+  }
+
+  header .kicker {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    opacity: 0.85;
+  }
+
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: 30px;
+    margin: 2px 0 0;
+    letter-spacing: 0.01em;
+  }
+
+  header h1 span { color: var(--gold); }
+
+  /* Lineup strip */
+  #lineup {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .slot {
+    background: var(--navy-light);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 4px 10px;
+    text-align: center;
+    min-height: 74px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .slot.filled {
+    background: linear-gradient(180deg, rgba(242,177,52,0.16), rgba(242,177,52,0.04));
+    border-color: var(--gold);
+  }
+
+  .slot .pos {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    opacity: 0.8;
+    margin-bottom: 4px;
+  }
+
+  .slot .pname {
+    font-size: 11.5px;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+
+  .slot .empty-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(243,237,224,0.35);
+    margin: 6px auto 0;
+  }
+
+  /* Skip bar */
+  #skips {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .skip-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--cream);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .skip-btn:disabled {
+    opacity: 0.3;
+    text-decoration: line-through;
+  }
+
+  /* Draft board */
+  #board {
+    background: var(--navy-light);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #pullInfo {
+    text-align: center;
+  }
+
+  #pullInfo .team {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  #pullInfo .era {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-top: 2px;
+  }
+
+  #playerList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .player-card {
+    background: var(--navy-dark);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .player-card.taken {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .player-card .badge {
+    background: var(--gold);
+    color: var(--navy-dark);
+    font-weight: 700;
+    font-size: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .player-card .info { flex: 1; }
+
+  .player-card .pname {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+
+  .player-card .pstats {
+    font-size: 11px;
+    opacity: 0.65;
+    margin-top: 2px;
+  }
+
+  .player-card .take {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  #spinBtn, #simBtn, #restartBtn {
+    font-family: inherit;
+    background: var(--gold);
+    color: var(--navy-dark);
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  #spinBtn:active, #simBtn:active, #restartBtn:active {
+    transform: scale(0.98);
+  }
+
+  #hint {
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.55;
+  }
+
+  /* Result screen */
+  #result {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+    padding: 10px 0;
+  }
+
+  #result .scoreboard {
+    background: var(--navy-dark);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 18px 24px;
+    font-family: "Courier New", monospace;
+    letter-spacing: 0.05em;
+  }
+
+  #result .scoreboard .rec {
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  #result .scoreboard .rec .loss { color: var(--loss); }
+
+  #result .verdict {
+    font-size: 15px;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  #result .roster-recap {
+    font-size: 12px;
+    opacity: 0.7;
+    line-height: 1.6;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 10.5px;
+    opacity: 0.4;
+    line-height: 1.5;
+    padding-top: 6px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="kicker">EUROLEAGUE ROSTER BUILDER</div>
+    <h1>34<span>-</span>0</h1>
+  </header>
+
+  <div id="lineup"></div>
+
+  <div id="skips">
+    <button class="skip-btn" id="teamSkipBtn">🔁 Skip ομάδας</button>
+    <button class="skip-btn" id="eraSkipBtn">🔁 Skip εποχής</button>
+  </div>
+
+  <div id="board">
+    <div id="pullInfo" style="display:none;">
+      <div class="team" id="pullTeam"></div>
+      <div class="era" id="pullEra"></div>
+    </div>
+    <div id="playerList"></div>
+    <button id="spinBtn">🎰 Γύρισε την ρόδα</button>
+    <div id="hint">Διάλεξε παίκτη για ανοιχτή θέση, ή κάνε spin ξανά.</div>
+
+    <div id="result">
+      <div class="scoreboard">
+        <div class="rec" id="recDisplay">0-0</div>
+      </div>
+      <div class="verdict" id="verdictText"></div>
+      <div class="roster-recap" id="rosterRecap"></div>
+      <button id="restartBtn">Νέο ρόστερ</button>
+    </div>
+  </div>
+
+  <footer>Ανεπίσημο, φτιαγμένο για διασκέδαση — δεν σχετίζεται με την Euroleague. Ρόστερ &amp; βαθμολογίες απλοποιημένες.</footer>
+</div>
+
+<script>
+(function() {
+
+  // ---- Dataset: teams x eras x 5 players (PG/SG/SF/PF/C) ----
+  // stats: sco (scoring), plm (playmaking), reb (rebounding), def (defense) — rough 0-99 gameplay ratings, not official.
+  const DATA = {
+    "Real Madrid": {
+      "Παλιά σχολή": [
+        {n:"Juan Antonio Corbalán", p:"PG", sco:60, plm:92, reb:40, def:70},
+        {n:"Dražen Petrović", p:"SG", sco:95, plm:70, reb:35, def:55},
+        {n:"Wayne Brabender", p:"SF", sco:75, plm:50, reb:65, def:70},
+        {n:"Fernando Martín", p:"PF", sco:65, plm:40, reb:85, def:80},
+        {n:"Arvydas Sabonis", p:"C", sco:88, plm:75, reb:90, def:78}
+      ],
+      "2010s": [
+        {n:"Sergio Llull", p:"PG", sco:80, plm:88, reb:35, def:65},
+        {n:"Rudy Fernández", p:"SG", sco:82, plm:60, reb:45, def:60},
+        {n:"Jaycee Carroll", p:"SF", sco:88, plm:40, reb:30, def:45},
+        {n:"Felipe Reyes", p:"PF", sco:65, plm:45, reb:85, def:82},
+        {n:"Ante Tomić", p:"C", sco:75, plm:55, reb:88, def:80}
+      ],
+      "2020s": [
+        {n:"Facundo Campazzo", p:"PG", sco:70, plm:92, reb:35, def:75},
+        {n:"Rudy Fernández", p:"SG", sco:75, plm:58, reb:42, def:58},
+        {n:"Mario Hezonja", p:"SF", sco:80, plm:50, reb:50, def:55},
+        {n:"Guerschon Yabusele", p:"PF", sco:72, plm:45, reb:75, def:68},
+        {n:"Walter Tavares", p:"C", sco:55, plm:35, reb:95, def:96}
+      ]
+    },
+    "Παναθηναϊκός": {
+      "Παλιά σχολή": [
+        {n:"Dejan Bodiroga", p:"PG", sco:85, plm:90, reb:45, def:60},
+        {n:"Νίκος Χατζηβρέττας", p:"SG", sco:82, plm:55, reb:35, def:50},
+        {n:"Dominique Wilkins", p:"SF", sco:94, plm:45, reb:60, def:55},
+        {n:"Φραγκίσκος Αλβέρτης", p:"PF", sco:60, plm:50, reb:75, def:85},
+        {n:"Žan Tabak", p:"C", sco:65, plm:40, reb:85, def:82}
+      ],
+      "2010s": [
+        {n:"Δημήτρης Διαμαντίδης", p:"PG", sco:65, plm:85, reb:45, def:96},
+        {n:"Κώστας Σλούκας", p:"SG", sco:75, plm:80, reb:35, def:62},
+        {n:"James Gist", p:"SF", sco:70, plm:40, reb:70, def:68},
+        {n:"Νίκος Παππάς", p:"PF", sco:68, plm:42, reb:65, def:60},
+        {n:"Σοφοκλής Σχορτσανίτης", p:"C", sco:80, plm:35, reb:75, def:70}
+      ],
+      "2020s": [
+        {n:"Nick Calathes", p:"PG", sco:62, plm:90, reb:50, def:75},
+        {n:"Marius Grigonis", p:"SG", sco:78, plm:55, reb:35, def:55},
+        {n:"Δήμος Μήτογλου", p:"SF", sco:70, plm:45, reb:60, def:58},
+        {n:"Ιωάννης Παπαπέτρου", p:"PF", sco:68, plm:50, reb:65, def:72},
+        {n:"Mathias Lessort", p:"C", sco:75, plm:35, reb:85, def:80}
+      ]
+    },
+    "Ολυμπιακός": {
+      "Παλιά σχολή": [
+        {n:"Νίκος Οικονόμου", p:"PG", sco:55, plm:82, reb:35, def:65},
+        {n:"Δημήτρης Παπανικολάου", p:"SG", sco:65, plm:55, reb:40, def:60},
+        {n:"David Rivers", p:"SF", sco:85, plm:70, reb:45, def:55},
+        {n:"Ευθύμης Ρεντζιάς", p:"PF", sco:75, plm:45, reb:78, def:72},
+        {n:"Arturas Karnišovas", p:"C", sco:60, plm:40, reb:75, def:70}
+      ],
+      "2010s": [
+        {n:"Βασίλης Σπανούλης", p:"PG", sco:88, plm:88, reb:35, def:70},
+        {n:"Κώστας Παπανικολάου", p:"SG", sco:70, plm:55, reb:50, def:72},
+        {n:"Γιώργος Πρίντεζης", p:"SF", sco:80, plm:50, reb:65, def:68},
+        {n:"Νικόλα Μιλουτίνοφ", p:"PF", sco:68, plm:40, reb:78, def:78},
+        {n:"Bryant Dunston", p:"C", sco:55, plm:30, reb:85, def:85}
+      ],
+      "2020s": [
+        {n:"Κώστας Σλούκας", p:"PG", sco:75, plm:82, reb:35, def:60},
+        {n:"Thomas Walkup", p:"SG", sco:70, plm:60, reb:40, def:65},
+        {n:"Sasha Vezenkov", p:"SF", sco:90, plm:50, reb:70, def:60},
+        {n:"Alec Peters", p:"PF", sco:72, plm:40, reb:60, def:55},
+        {n:"Moustapha Fall", p:"C", sco:45, plm:25, reb:85, def:88}
+      ]
+    },
+    "CSKA Μόσχας": {
+      "Παλιά σχολή": [
+        {n:"Šarūnas Jasikevičius", p:"PG", sco:85, plm:92, reb:30, def:55},
+        {n:"Trajan Langdon", p:"SG", sco:88, plm:55, reb:35, def:50},
+        {n:"J.R. Holden", p:"SF", sco:75, plm:70, reb:45, def:58},
+        {n:"Predrag Drobnjak", p:"PF", sco:70, plm:45, reb:75, def:70},
+        {n:"David Andersen", p:"C", sco:68, plm:40, reb:80, def:78}
+      ],
+      "2010s": [
+        {n:"Miloš Teodosić", p:"PG", sco:80, plm:96, reb:35, def:50},
+        {n:"Nando de Colo", p:"SG", sco:90, plm:75, reb:40, def:58},
+        {n:"Sonny Weems", p:"SF", sco:78, plm:50, reb:55, def:62},
+        {n:"Andrey Vorontsevich", p:"PF", sco:65, plm:45, reb:70, def:72},
+        {n:"Nikita Kurbanov", p:"C", sco:60, plm:40, reb:75, def:70}
+      ],
+      "2020s": [
+        {n:"Mike James", p:"PG", sco:95, plm:82, reb:35, def:55},
+        {n:"Nando de Colo", p:"SG", sco:85, plm:72, reb:40, def:58},
+        {n:"Will Clyburn", p:"SF", sco:82, plm:45, reb:55, def:58},
+        {n:"Johannes Voigtmann", p:"PF", sco:68, plm:55, reb:72, def:68},
+        {n:"Tornike Shengelia", p:"C", sco:72, plm:50, reb:70, def:65}
+      ]
+    },
+    "Maccabi Tel Aviv": {
+      "Παλιά σχολή": [
+        {n:"Doron Sheffer", p:"PG", sco:60, plm:88, reb:35, def:55},
+        {n:"Oded Kattash", p:"SG", sco:78, plm:55, reb:35, def:52},
+        {n:"Anthony Parker", p:"SF", sco:80, plm:50, reb:50, def:70},
+        {n:"Doron Jamchy", p:"PF", sco:65, plm:45, reb:65, def:68},
+        {n:"Maceo Baston", p:"C", sco:70, plm:35, reb:85, def:80}
+      ],
+      "2010s": [
+        {n:"Norris Cole", p:"PG", sco:78, plm:80, reb:35, def:65},
+        {n:"James Nunnally", p:"SG", sco:80, plm:45, reb:40, def:50},
+        {n:"DeShaun Thomas", p:"SF", sco:85, plm:40, reb:55, def:45},
+        {n:"Alex Tyus", p:"PF", sco:65, plm:40, reb:75, def:72},
+        {n:"Jake Cohen", p:"C", sco:60, plm:35, reb:78, def:75}
+      ],
+      "2020s": [
+        {n:"Lorenzo Brown", p:"PG", sco:75, plm:85, reb:40, def:60},
+        {n:"Wade Baldwin IV", p:"SG", sco:72, plm:60, reb:40, def:62},
+        {n:"TJ Leaf", p:"SF", sco:70, plm:45, reb:60, def:50},
+        {n:"Yovel Zoosman", p:"PF", sco:62, plm:50, reb:60, def:65},
+        {n:"Jasiel Rivero", p:"C", sco:55, plm:30, reb:75, def:70}
+      ]
+    },
+    "Fenerbahçe": {
+      "Παλιά σχολή": [
+        {n:"Ömer Onan", p:"PG", sco:60, plm:80, reb:35, def:58},
+        {n:"İbrahim Kutluay", p:"SG", sco:75, plm:50, reb:35, def:50},
+        {n:"Preston Shumpert", p:"SF", sco:82, plm:40, reb:45, def:45},
+        {n:"Mirsad Türkcan", p:"PF", sco:68, plm:45, reb:75, def:72},
+        {n:"Predrag Drobnjak", p:"C", sco:65, plm:40, reb:75, def:70}
+      ],
+      "2010s": [
+        {n:"Nikola Kalinić", p:"PG", sco:75, plm:70, reb:40, def:62},
+        {n:"Bogdan Bogdanović", p:"SG", sco:88, plm:65, reb:42, def:58},
+        {n:"Luigi Datome", p:"SF", sco:78, plm:45, reb:50, def:55},
+        {n:"Ekpe Udoh", p:"PF", sco:55, plm:35, reb:85, def:90},
+        {n:"Jan Veselý", p:"C", sco:70, plm:40, reb:85, def:78}
+      ],
+      "2020s": [
+        {n:"Scottie Wilbekin", p:"PG", sco:80, plm:78, reb:35, def:62},
+        {n:"Marko Gudurić", p:"SG", sco:78, plm:50, reb:45, def:60},
+        {n:"Nigel Hayes-Davis", p:"SF", sco:75, plm:50, reb:55, def:58},
+        {n:"Tarik Biberović", p:"PF", sco:70, plm:45, reb:50, def:50},
+        {n:"Khem Birch", p:"C", sco:60, plm:30, reb:80, def:82}
+      ]
+    }
+  };
+
+  const TEAMS = Object.keys(DATA);
+  const ERAS = ["Παλιά σχολή", "2010s", "2020s"];
+  const POSITIONS = ["PG","SG","SF","PF","C"];
+
+  // ---- State ----
+  let lineup = { PG:null, SG:null, SF:null, PF:null, C:null };
+  let teamSkipUsed = false;
+  let eraSkipUsed = false;
+  let currentPull = null; // {team, era, players}
+
+  // ---- DOM ----
+  const lineupEl = document.getElementById('lineup');
+  const spinBtn = document.getElementById('spinBtn');
+  const pullInfo = document.getElementById('pullInfo');
+  const pullTeam = document.getElementById('pullTeam');
+  const pullEra = document.getElementById('pullEra');
+  const playerList = document.getElementById('playerList');
+  const hint = document.getElementById('hint');
+  const teamSkipBtn = document.getElementById('teamSkipBtn');
+  const eraSkipBtn = document.getElementById('eraSkipBtn');
+  const resultEl = document.getElementById('result');
+  const recDisplay = document.getElementById('recDisplay');
+  const verdictText = document.getElementById('verdictText');
+  const rosterRecap = document.getElementById('rosterRecap');
+  const restartBtn = document.getElementById('restartBtn');
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function renderLineup() {
+    lineupEl.innerHTML = '';
+    POSITIONS.forEach(pos => {
+      const div = document.createElement('div');
+      const player = lineup[pos];
+      div.className = 'slot' + (player ? ' filled' : '');
+      if (player) {
+        div.innerHTML = `<div class="pos">${pos}</div><div class="pname">${player.n}</div>`;
+      } else {
+        div.innerHTML = `<div class="pos">${pos}</div><div class="empty-dot"></div>`;
+      }
+      lineupEl.appendChild(div);
+    });
+  }
+
+  function lineupComplete() {
+    return POSITIONS.every(p => lineup[p] !== null);
+  }
+
+  function newPull(team, era) {
+    currentPull = { team, era, players: DATA[team][era] };
+    pullTeam.textContent = team;
+    pullEra.textContent = era;
+    pullInfo.style.display = 'block';
+    renderPlayerList();
+  }
+
+  function renderPlayerList() {
+    playerList.innerHTML = '';
+    currentPull.players.forEach(player => {
+      const taken = lineup[player.p] !== null;
+      const card = document.createElement('div');
+      card.className = 'player-card' + (taken ? ' taken' : '');
+      card.innerHTML = `
+        <div class="badge">${player.p}</div>
+        <div class="info">
+          <div class="pname">${player.n}</div>
+          <div class="pstats">SCO ${player.sco} · PLM ${player.plm} · REB ${player.reb} · DEF ${player.def}</div>
+        </div>
+        ${taken ? '<div class="take">θέση γεμάτη</div>' : '<div class="take">Επίλεξε →</div>'}
+      `;
+      if (!taken) {
+        card.addEventListener('click', () => draftPlayer(player));
+      }
+      playerList.appendChild(card);
+    });
+  }
+
+  function draftPlayer(player) {
+    lineup[player.p] = player;
+    renderLineup();
+    currentPull = null;
+    pullInfo.style.display = 'none';
+    playerList.innerHTML = '';
+
+    if (lineupComplete()) {
+      spinBtn.textContent = '🏀 Προσομοίωση σεζόν';
+      spinBtn.onclick = simulateSeason;
+      hint.textContent = 'Το ρόστερ είναι έτοιμο — τρέξε την σεζόν!';
+      teamSkipBtn.disabled = true;
+      eraSkipBtn.disabled = true;
+    } else {
+      hint.textContent = 'Γύρισε ξανά την ρόδα για την επόμενη θέση.';
+    }
+  }
+
+  function doSpin() {
+    const team = pick(TEAMS);
+    const era = pick(ERAS);
+    newPull(team, era);
+  }
+
+  function skipTeam() {
+    if (!currentPull || teamSkipUsed) return;
+    teamSkipUsed = true;
+    teamSkipBtn.disabled = true;
+    const team = pick(TEAMS.filter(t => t !== currentPull.team));
+    newPull(team, currentPull.era);
+  }
+
+  function skipEra() {
+    if (!currentPull || eraSkipUsed) return;
+    eraSkipUsed = true;
+    eraSkipBtn.disabled = true;
+    const era = pick(ERAS.filter(e => e !== currentPull.era));
+    newPull(currentPull.team, era);
+  }
+
+  function ratingOf(player) {
+    return (player.sco + player.plm + player.reb + player.def) / 4;
+  }
+
+  function simulateSeason() {
+    const composite = POSITIONS.reduce((sum, p) => sum + ratingOf(lineup[p]), 0) / 5;
+    let winProb = 0.5 + (composite - 70) * 0.018;
+    winProb = Math.max(0.05, Math.min(0.90, winProb));
+
+    let wins = 0, losses = 0;
+    const totalGames = 34;
+    for (let i = 0; i < totalGames; i++) {
+      if (Math.random() < winProb) wins++; else losses++;
+    }
+
+    document.getElementById('board').querySelector('#playerList').innerHTML = '';
+    pullInfo.style.display = 'none';
+    spinBtn.style.display = 'none';
+    hint.style.display = 'none';
+    teamSkipBtn.style.display = 'none';
+    eraSkipBtn.style.display = 'none';
+
+    resultEl.style.display = 'flex';
+    recDisplay.innerHTML = `${wins}<span class="loss">-${losses}</span>`;
+
+    let verdict;
+    if (losses === 0) {
+      verdict = '🏆 ΤΕΛΕΙΑ ΣΕΖΟΝ! Το ρόστερ σου πέτυχε το αδύνατο — 34-0.';
+    } else if (wins >= 30) {
+      verdict = 'Σχεδόν τέλειο! Ένα ρόστερ ιστορικού επιπέδου, πολύ κοντά στο 34-0.';
+    } else if (wins >= 24) {
+      verdict = 'Πολύ καλή σεζόν — πρωτάθλημα σίγουρα, αλλά όχι τέλειο ρεκόρ.';
+    } else if (wins >= 17) {
+      verdict = 'Ισορροπημένο ρόστερ, ισορροπημένη σεζόν. Playoffs μεν, 34-0 δε.';
+    } else {
+      verdict = 'Δύσκολη χρονιά για τη λιμνούλα... θέλει καλύτερη ισορροπία θέσεων.';
+    }
+    verdictText.textContent = verdict;
+
+    rosterRecap.innerHTML = POSITIONS.map(p => `${p}: ${lineup[p].n}`).join(' · ');
+  }
+
+  function resetGame() {
+    lineup = { PG:null, SG:null, SF:null, PF:null, C:null };
+    teamSkipUsed = false;
+    eraSkipUsed = false;
+    currentPull = null;
+
+    renderLineup();
+    pullInfo.style.display = 'none';
+    playerList.innerHTML = '';
+    spinBtn.style.display = 'block';
+    spinBtn.textContent = '🎰 Γύρισε την ρόδα';
+    spinBtn.onclick = doSpin;
+    hint.style.display = 'block';
+    hint.textContent = 'Διάλεξε παίκτη για ανοιχτή θέση, ή κάνε spin ξανά.';
+    teamSkipBtn.style.display = 'block';
+    eraSkipBtn.style.display = 'block';
+    teamSkipBtn.disabled = false;
+    eraSkipBtn.disabled = false;
+    resultEl.style.display = 'none';
+  }
+
+  teamSkipBtn.addEventListener('click', skipTeam);
+  eraSkipBtn.addEventListener('click', skipEra);
+  restartBtn.addEventListener('click', resetGame);
+  spinBtn.addEventListener('click', doSpin);
+
+  renderLineup();
+})();
+</script>
+</body>
+</html>
